@@ -1,4 +1,8 @@
-#include<inttypes.h>
+#ifndef _FAT_STRUCT_H
+#define _FAT_STRUCT_H
+
+#include <stdint.h>
+#include <sys/types.h>
 
 struct FAT32_BOOT 
 {
@@ -44,10 +48,10 @@ struct FAT32_FSInfo
 
     uint32_t         lead_signature;      // lead signature "0x41615252".
     unsigned char    reserved[480];       // reserved.
+    uint32_t         rev_signature;       // another signature "0x61417272".
     uint32_t         free_clusters;       // free cluster count. if 0xFFFFFFFF - this count is unknown.
     uint32_t         next_cluster;        // Indicates the cluster number at which the ﬁlesystem driver should start looking for available clusters.
-    unsigned char    reserved_[12];       // ved.
-    uint32_t         rev_signature;       // another signature "0x61417272".
+    unsigned char    reserved_[12];       // reserved.
     uint32_t         trail_signature;     // 0xAA550000.
 
 } __attribute__ ((packed));
@@ -68,21 +72,16 @@ struct DIR_ENT
     uint16_t         first_cluster_low;
     uint32_t         file_size;           // the size of the file in bytes.
 
-} __attribute__ ((packed));
+};
 
 struct DOS_FILE
 {
 
     struct DIR_ENT*  dir_ent;
-    char*            long_name;
-    off_t            offset;
-    off_t            long_name_off;
-    //struct DOS_FILE* parent_dir;
-    //struct DOS_FILE* next_entry;
-    //struct DOS_FILE* first_entry;
     uint32_t         parent_cluster;
     uint32_t         grandp_cluster;
     char             path[32768];
+    
 };
 
 struct FAT32_FS 
@@ -115,3 +114,5 @@ struct FAT_ENTRY
     uint32_t reserved;
 
 };
+
+#endif 

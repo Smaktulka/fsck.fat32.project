@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "source.h": "c",
+        "fat_struct.h": "c"
     }
 }
