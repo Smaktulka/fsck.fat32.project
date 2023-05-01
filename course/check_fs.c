@@ -181,8 +181,8 @@ uint32_t next_cluster(uint32_t cluster)
 
 int test_file(uint8_t isroot, struct DOS_FILE* file)
 {
-    struct DIR_ENT* entry = file->dir_ent;
-    uint8_t attr = entry->attributes;
+    struct DIR_ENT* entry    = file->dir_ent;
+    uint8_t attr             = entry->attributes;
     unsigned char* file_name = (unsigned char*)malloc(12 * sizeof(unsigned char));
     strcpy(file_name, entry->file_name);
     file_name[11] = 0;
