@@ -34,6 +34,7 @@ int get_options(int argc, char** argv)
                 ret_opt |= SHOW_FILES;
                 break;
             default:
+                return -1;
                 break; 
         }
     }
@@ -45,6 +46,11 @@ int get_options(int argc, char** argv)
 
 int check_args(int argc, char** argv) 
 {
+    if (argc <= 1) 
+    {
+        return -1;
+    }
+
     if (get_options(argc, argv) == -1) 
     {
         return -1;
@@ -73,8 +79,8 @@ int myfsck(int argc, char** argv)
         return -1;
     }
 
-    file_sys.ent_bits = 28;
-    file_sys.entry_size = 32;
+    file_sys.ent_bits = 28;  // amount of bits that are used in fat32
+    file_sys.entry_size = 32; // actual entry size
 
     if (read_fat() == INVALID_FAT_SECTOR) 
     {
@@ -86,7 +92,7 @@ int myfsck(int argc, char** argv)
     path[0] = '~';
     path[1] = 0;
 
-    read_disk(boot.root_dir_cluster, boot.root_dir_cluster, path);
+    read_disk(boot.root_dir_cluster, boot.root_dir_cluster, path); // read full disk
 
     printf("\nerrors count: %d\n", total_errors_count);    
     printf("defected files: %d\n", defected_files);
@@ -101,6 +107,7 @@ int main(int argc, char** argv)
     if (check_args(argc, argv) == -1) 
     {
         print_usage();
+        return -1;
     }
     
     return myfsck(argc, argv);

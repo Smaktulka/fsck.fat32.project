@@ -32,6 +32,7 @@ int check_file_name(unsigned char* name, uint8_t isroot, uint8_t attr)
         return INVALID_FILE_NAME;
     }
 
+    /* check for invalid characters*/
     for (int i = 0; i < 11; i++) 
     {
         if (name[i] == 0x7f)
@@ -47,6 +48,7 @@ int check_file_name(unsigned char* name, uint8_t isroot, uint8_t attr)
 
     int space = 0;
 
+    /* check for spaces in name */
     for (int i = 0; i < 8; i++) 
     {
         if (name[i] == ' ') 
@@ -65,7 +67,7 @@ int check_file_name(unsigned char* name, uint8_t isroot, uint8_t attr)
     }
 
     space = 0;
-
+    /* check for spaces in extension  */
     for (int i = 8; i < 11; i++) 
     {
         if (name[i] == ' ')
@@ -86,7 +88,6 @@ void change_file_name(char* name, uint8_t attr)
 {
     int i = 0;
     char* ext = name + 8;
-    int ext_space = 0;
     for (; i < 8; i++)
     {
         if (name[i] == ' ')
@@ -95,25 +96,14 @@ void change_file_name(char* name, uint8_t attr)
         }
     }
 
+    /* if it is directory, do not add any dot at the end */
     if (attr & DIR)
     {
         name[i] = 0;
         return;
     }
 
-    for (int j = 0; j < 3; j++)
-    {
-        if (ext[j] == ' ')
-        {
-            ext_space++;
-        }
-    }
-
-    if (attr & ARCHIVE && ext_space == 3)
-    {
-        return;
-    }
-
+    /* complete file name with dot before extension */
     if (i == 8)
     {
         char* dotname = (char*)malloc(13);
@@ -187,6 +177,7 @@ int test_file(uint8_t isroot, struct DOS_FILE* file)
     strcpy(file_name, entry->file_name);
     file_name[11] = 0;
 
+    /* file name check */
     if (file_name[0] == 0xE5 || attr == VOLUME_ID)
     {
         if (options & SHOW_FILES)
@@ -215,6 +206,7 @@ int test_file(uint8_t isroot, struct DOS_FILE* file)
 
     uint32_t entry_start = get_entry_start(entry);
 
+    /* checking directory for errors */
     if (attr & DIR)
     {
         int check_count = total_errors_count;
@@ -267,6 +259,7 @@ int test_file(uint8_t isroot, struct DOS_FILE* file)
         return 0;
     }
 
+    /* checking for bad clusters and loops */
     for (current = entry_start ? entry_start : -1; current != -1;)
     {
         struct FAT_ENTRY fat_entry;
@@ -286,7 +279,7 @@ int test_file(uint8_t isroot, struct DOS_FILE* file)
             return INVALID_SIZE;
         }
 
-        // check for loop
+        /* checking for loop */ 
         if (owner = file_sys.cluster_owner[current])    
         {
             if (owner == file)

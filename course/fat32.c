@@ -108,6 +108,7 @@ int init_file_sys()
 {
     int retval = 0;
 
+    /* init file_sys */
     int sector_size            = boot.sector_size;
     int fat_start              = sector_size * boot.reserved_sectors;
     int fat_size               = boot.sectors_in_table * sector_size;
@@ -129,6 +130,7 @@ int init_file_sys()
 
     file_sys.root_cluster      = boot.root_dir_cluster;
 
+    /* check file_sys for errors */
     if (file_sys.root_cluster == 0)
     {
         fprintf(stderr, RED "No root dir...\n" RESET);
@@ -163,7 +165,7 @@ int read_fsinfo()
     int error = 0;
     unsigned char* info_buf = (unsigned char*)malloc(513 * sizeof(unsigned char));
 
-    fs_read(file_sys.fsinfo_start, 512, info_buf);
+    fs_read(file_sys.fsinfo_start, 512, info_buf); // read fs_info
     info_buf[512] = 0;
 
 
@@ -206,9 +208,9 @@ int read_fsinfo()
 int read_fat()
 {
     int total_clusters_num = file_sys.data_clusters + 2;
-    int eff_size           = (total_clusters_num * file_sys.entry_size + 7) / 8ULL;
-    void* first            = (unsigned int*)malloc((eff_size + 1)* sizeof(void));
-    void* second           = NULL;
+    int eff_size           = (total_clusters_num * file_sys.entry_size + 7) / 8ULL; // fat size
+    void* first            = (unsigned int*)malloc((eff_size + 1)* sizeof(void));   // first fat
+    void* second           = NULL;                                                  // second fat
     int first_check        = 0;
     int second_check       = 0;
     struct FAT_ENTRY first_media, second_media;
@@ -231,6 +233,7 @@ int read_fat()
             printf(BLU "fats differs.\n\n" RESET);
         }
 
+        /* if second fat is valid, use it*/
         if(first_check && !second_check) 
         {
             free(first);
@@ -259,15 +262,16 @@ int read_fat()
 
 void read_disk(uint32_t cluster, uint32_t grandp, char* file_path)
 {
-    int sector_num          = 0;
-    int entry_num           = 0;
-    struct DIR_ENT* entry   = (struct DIR_ENT*)malloc(1 * sizeof(struct DIR_ENT)); 
-    off_t offset            = base_cluster(cluster);
-    struct DOS_FILE* file   = (struct DOS_FILE*)malloc(sizeof(struct DOS_FILE));
-    file->dir_ent           = (struct DIR_ENT*)malloc(sizeof(struct DIR_ENT));
-    file->parent_cluster    = cluster;
-    file->grandp_cluster    = grandp;
+    int sector_num          = 0;                                                    
+    int entry_num           = 0;                                                     
+    struct DIR_ENT* entry   = (struct DIR_ENT*)malloc(1 * sizeof(struct DIR_ENT));  // current directory entry
+    off_t offset            = base_cluster(cluster);                                // offset to cluster num where file data or dir first file located
+    struct DOS_FILE* file   = (struct DOS_FILE*)malloc(sizeof(struct DOS_FILE));    // file from dir_entry
+    file->dir_ent           = (struct DIR_ENT*)malloc(sizeof(struct DIR_ENT));      
+    file->parent_cluster    = cluster;                                              // parent cluster num
+    file->grandp_cluster    = grandp;                                               // grandparent cluster num
     strcat(file_path, "/");
+
     for (; sector_num < boot.sectors_in_cluster; sector_num++)
     {
         for (; entry_num < file_sys.entries_in_sec; entry_num++)
@@ -279,19 +283,19 @@ void read_disk(uint32_t cluster, uint32_t grandp, char* file_path)
             fs_read(offset + (entry_num * 32), sizeof(struct DIR_ENT), entry);
             entry->file_name[12] = 0;
 
-            if (entry->file_name[0] == 0)
+            if (entry->file_name[0] == 0) // if entry is zero, stop read
             {
                 break;
             }
 
-            if (entry->attributes == LONG_NAME)
+            if (entry->attributes == LONG_NAME) // if long file name entry is reached, just skip
             {
                 continue;
             }
 
             file->dir_ent = entry;
             
-            if (test_file(!cluster, file))
+            if (test_file(!cluster, file) > FREE_FILE)
             {
                 defected_files++;
                 fprintf(stderr, RED "File '%s' is defected.\n\n" RESET, file->path);
@@ -303,58 +307,6 @@ void read_disk(uint32_t cluster, uint32_t grandp, char* file_path)
             }
         }
     }
-}
-
-void boot_output() 
-{
-    boot.jmp_bytes[3] = 0;
-    printf("jmp_bytes:%s\n", boot.jmp_bytes);
-    boot.jmp_bytes[3] = 'M';
-    printf("dos_version:\t\t\t %s\n", boot.dos_version);
-    printf("sector_size:\t\t\t %d     -    0x%X\n", 
-        boot.sector_size, boot.sector_size);
-    printf("sectors in cluster:\t\t\t %d\n", boot.sectors_in_cluster);
-    printf("reserved sectors:\t\t\t %d     -     0x%X\n", 
-        boot.reserved_sectors, boot.reserved_sectors);
-    printf("num of fats:\t\t\t %d\n", boot.fats_num);
-    printf("num of root dir entries:\t\t\t %d    -    0x%X\n", 
-        boot.dir_entries_num, boot.dir_entries_num);
-    printf("num of sectors:\t\t\t %d    -    0x%X\n", 
-        boot.sectors_num, boot.sectors_num);
-    printf("media descriptor:\t\t\t %d\n", boot.media_desc);
-    printf("sectors num fat16:\t\t\t %d    -    0x%X\n", 
-        boot.sectors_num_fat16, boot.sectors_num_fat16);
-    printf("sectors in track:\t\t\t %d    -   0x%X\n", 
-        boot.sectors_in_track, boot.sectors_in_track);
-    printf("read-write headers:\t\t\t %d    -   0x%X\n", 
-        boot.rw_heads_num, boot.rw_heads_num);
-    printf("number of hidden sectors:\t\t\t %d     -   0x%X\n",
-        boot.hidden_sectors_num, boot.hidden_sectors_num);
-    printf("total sector count:\t\t\t %d     -   0x%X\n", 
-        boot.total_sector_count, boot.total_sector_count);
-    printf("||_____Extended boot Record______||\n");
-    printf("sectors in table:\t\t\t %d    -    0x%X\n", 
-        boot.sectors_in_table, boot.sectors_in_table);
-    printf("flags:\t\t\t %d    -    0x%X\n", 
-        boot.flags, boot.flags);
-    printf("fat version:\t\t\t %d    -   0x%X\n", 
-        boot.fat_version, boot.fat_version);
-    printf("root dir cluster:\t\t\t %d    -    0x%X\n", 
-        boot.root_dir_cluster, boot.root_dir_cluster);
-    printf("fsinfo sector number:\t\t\t %d    -    0x%X\n", 
-        boot.fsinfo_sec_num, boot.fsinfo_sec_num);
-    printf("backup boot sector number:\t\t\t %d    -    0x%X\n", 
-        boot.backup_boot_sector, boot.backup_boot_sector);
-    printf("drive number:\t\t\t %d\n", boot.drive_num);    
-    printf("win nt flags:\t\t\t %d\n", boot.win_nt_flags);
-    printf("signature:\t\t\t 0x%X\n", boot.signature);
-    printf("volume id:\t\t\t %d     -    0x%X\n", 
-        boot.volume_id, boot.volume_id);    
-    printf("volume label:\t\t\t %s\n", boot.volume_label);
-    printf("file system name:\t\t\t %s\n", boot.fs_name);
-    printf("volume label:\t\t\t %d    -   0x%X\n",
-        boot.boot_signature, boot.boot_signature);
-    
 }
 
 void pretty_output() 
